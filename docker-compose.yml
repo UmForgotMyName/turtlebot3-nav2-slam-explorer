@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  tb3_nav2_slam:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ENABLE_WSLG_GPU: ${ENABLE_WSLG_GPU:-false}
+    container_name: tb3_nav2_slam
+    network_mode: host
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-0}
+      XDG_RUNTIME_DIR: /run/user/0
+      QT_QPA_PLATFORM: ${QT_QPA_PLATFORM:-wayland}
+      PULSE_SERVER: ${PULSE_SERVER:-/mnt/wslg/PulseServer}
+      QT_X11_NO_MITSHM: "1"
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+      GZ_VERSION: harmonic
+      GALLIUM_DRIVER: ${GALLIUM_DRIVER:-d3d12}
+      MESA_LOADER_DRIVER_OVERRIDE: ${MESA_LOADER_DRIVER_OVERRIDE:-d3d12}
+      LIBGL_DRIVERS_PATH: ${LIBGL_DRIVERS_PATH:-/usr/lib/x86_64-linux-gnu/dri:/usr/lib/wsl/lib}
+      LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-/usr/lib/wsl/lib}
+      LIBGL_ALWAYS_SOFTWARE: "0"
+      PROJECT_ROOT: /root/project
+    volumes:
+      - .:/root/project
+      - ${X11_SOCKET_DIR:-/tmp/.X11-unix}:/tmp/.X11-unix
+      - ${WSLG_MOUNT:-/tmp/wslg}:/mnt/wslg
+      - ${WSL_LIB_MOUNT:-/tmp/wsl-lib}:/usr/lib/wsl:ro
+    devices:
+      - ${DXG_DEVICE:-/dev/null}:/dev/dxg
+    working_dir: /root/project
+    stdin_open: true
+    tty: true
+    command: ["bash"]

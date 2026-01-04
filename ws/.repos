@@ -1,0 +1,13 @@
+repositories:
+  turtlebot3_simulations:
+    type: git
+    url: https://github.com/gazebosim/turtlebot3_simulations.git
+    version: new_gazebo
+  turtlebot3:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/turtlebot3.git
+    version: humble-devel
+  m_explore_ros2:
+    type: git
+    url: https://github.com/robo-friends/m-explore-ros2.git
+    version: 926033fdef55af37ec0455660c0e4d00aa47e82f
