@@ -16,38 +16,50 @@ Native Ubuntu:
 
 ## Quick start (WSL2)
 
-1) Build the image and workspace:
+1) Build the image:
 ```
 chmod +x scripts/*.sh
 ./scripts/build.sh
 ```
 
-2) Bring up the full stack (Gazebo + SLAM + Nav2 + RViz):
+2) Start the container:
 ```
 ./scripts/up.sh
 ```
 
-Optional: enable autonomous exploration (frontier-based):
+3) Open a shell:
 ```
-EXPLORE=true ./scripts/up.sh
+./scripts/bash.sh
 ```
 
-3) Teleop the robot (new terminal):
+4) Launch:
+```
+ros2 launch tb3_nav2_slam_bringup bringup_slam_nav2.launch.py
+```
+
+Optional: enable autonomous exploration (frontier-based):
+```
+ros2 launch tb3_nav2_slam_bringup bringup_slam_nav2.launch.py explore:=True
+```
+
+5) Teleop the robot (new terminal):
 ```
 ./scripts/bash.sh
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-4) Save the map:
+6) Save the map:
 ```
 ./scripts/bash.sh
-ros2 run nav2_map_server map_saver_cli -f /root/project/maps/my_map
+ros2 run nav2_map_server map_saver_cli -f /home/ros/project/maps/my_map
 ```
 
-5) Shut everything down:
+7) Shut everything down:
 ```
-./scripts/down.sh
+docker compose down
 ```
+
+Note: upstream sources and this bringup package are built into the image. If you change code or want updates, re-run `./scripts/build.sh`.
 
 ## WSLg GPU acceleration (optional)
 
@@ -68,30 +80,12 @@ If software rendering works but hardware doesn't, try setting:
 export QT_QPA_PLATFORM='wayland;xcb'
 ```
 
-For D3D12 acceleration under WSLg, you may also need to mount `/usr/lib/wsl` and set:
-```
-export GALLIUM_DRIVER=d3d12
-export MESA_LOADER_DRIVER_OVERRIDE=d3d12
-export LIBGL_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri:/usr/lib/wsl/lib
-export LD_LIBRARY_PATH=/usr/lib/wsl/lib
-```
-
-If you want to build with the optional Mesa upgrade, set:
-```
-ENABLE_WSLG_GPU=true ./scripts/build.sh
-```
-
-By default, RViz is launched in software rendering mode. To allow GPU rendering in RViz:
-```
-RVIZ_SOFTWARE=false ./scripts/up.sh
-```
-
 ## Display environment variables
 
-`docker-compose.yml` uses these variables, and `scripts/up.sh` auto-sets WSLg paths when `/mnt/wslg` exists:
-- `WSLG_MOUNT` (default `/tmp/wslg`, WSLg uses `/mnt/wslg`)
-- `X11_SOCKET_DIR` (default `/tmp/.X11-unix`, WSLg uses `/mnt/wslg/.X11-unix`)
-- `QT_QPA_PLATFORM` (default `wayland`)
+`docker-compose.yml` mounts WSLg paths directly and sets GUI-related env vars:
+- `/mnt/wslg`
+- `/usr/lib/wsl`
+- `/tmp/.X11-unix`
 
 ## Native Ubuntu (no WSL)
 
@@ -110,11 +104,6 @@ Then run:
 If you are using pure X11, you may want:
 ```
 export QT_QPA_PLATFORM=xcb
-```
-
-If your project is not mounted at `/root/project`, set `PROJECT_ROOT` before launching:
-```
-PROJECT_ROOT=$PWD ./scripts/up.sh
 ```
 
 ## How it works
@@ -178,7 +167,7 @@ Confirm `map->odom`, `odom->base_link`, `base_link->base_scan`.
 5) Save map:
 ```
 ./scripts/bash.sh
-ros2 run nav2_map_server map_saver_cli -f /root/project/maps/my_map
+ros2 run nav2_map_server map_saver_cli -f /home/ros/project/maps/my_map
 ```
 
 6) Nav2 goal:
@@ -186,7 +175,7 @@ ros2 run nav2_map_server map_saver_cli -f /root/project/maps/my_map
 - Robot should plan and drive while SLAM is running
 
 7) Exploration (optional):
-- Start with `EXPLORE=true ./scripts/up.sh`
+- Start with `ros2 launch tb3_nav2_slam_bringup bringup_slam_nav2.launch.py explore:=True`
 - Watch the robot autonomously select frontier goals and expand the map
 
 ## Troubleshooting
@@ -194,13 +183,13 @@ ros2 run nav2_map_server map_saver_cli -f /root/project/maps/my_map
 - Gazebo GUI does not open in WSL2:
   - Verify WSLg is enabled and `DISPLAY`/`WAYLAND_DISPLAY` are set.
   - Try headless mode: `./scripts/up.sh` with `GUI=false` or `HEADLESS=true`.
-  - Confirm the Wayland socket exists inside the container: `ls -l /run/user/0/wayland-0`.
+  - Confirm the Wayland socket exists inside the container: `ls -l /mnt/wslg/runtime-dir/wayland-0`.
   - If GUI never opens, ensure `gz_args` does not force `-s` (server-only). This repo removes it in `ws/src/tb3_nav2_slam_bringup/launch/sim_gz.launch.py`.
 
 - No `/scan` topic:
   - Run `gz topic -l` inside the container to confirm the lidar topic exists.
   - If the topic name is not `/scan`, update `ws/src/tb3_nav2_slam_bringup/config/bridge.yaml`.
-  - Ensure your world loads the Gazebo Sensors system plugin; see `assets/worlds/empty_world.sdf`.
+  - Ensure your world loads the Gazebo Sensors system plugin; see `/home/ros/project/ws/src/tb3_nav2_slam_bringup/assets/worlds/empty_world.sdf`.
 
 - No `map->odom` transform:
   - Confirm slam_toolbox is running and frames match `slam_toolbox_params.yaml`.
@@ -232,13 +221,13 @@ ros2 run nav2_map_server map_saver_cli -f /root/project/maps/my_map
 - Launch manually (inside container):
 ```
 source /opt/ros/humble/setup.bash
-source /root/project/ws/install/setup.bash
+source /opt/tb3_ws/install/setup.bash
 ros2 launch tb3_nav2_slam_bringup bringup_slam_nav2.launch.py
 ```
 
 - Switch worlds:
 ```
-WORLD=/root/project/assets/worlds/empty_world.sdf ./scripts/up.sh
+ros2 launch tb3_nav2_slam_bringup bringup_slam_nav2.launch.py world:=/opt/tb3_ws/install/share/tb3_nav2_slam_bringup/assets/worlds/empty_world.sdf
 ```
 
 ## Notes on Gazebo Harmonic + Humble

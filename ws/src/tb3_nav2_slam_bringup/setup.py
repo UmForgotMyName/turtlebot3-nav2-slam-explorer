@@ -1,4 +1,5 @@
 from glob import glob
+import os
 from setuptools import setup
 
 package_name = "tb3_nav2_slam_bringup"
@@ -12,6 +13,11 @@ setup(
         (f"share/{package_name}", ["package.xml"]),
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
         (f"share/{package_name}/config", glob("config/*")),
+        (f"share/{package_name}/assets/worlds", glob("assets/worlds/*")),
+        (
+            f"share/{package_name}/assets/models",
+            [path for path in glob("assets/models/**/*", recursive=True) if os.path.isfile(path)],
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,

@@ -1,5 +1,3 @@
-import os
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
@@ -10,8 +8,9 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description() -> LaunchDescription:
-    project_root = os.environ.get("PROJECT_ROOT", "/root/project")
-    default_world = os.path.join(project_root, "assets", "worlds", "tb3_world.sdf")
+    default_world = PathJoinSubstitution(
+        [FindPackageShare("tb3_nav2_slam_bringup"), "assets", "worlds", "tb3_world.sdf"]
+    )
     world = LaunchConfiguration("world")
     model = LaunchConfiguration("model")
     gui = LaunchConfiguration("gui")

@@ -7,8 +7,4 @@ ws/log/
 *.pyd
 *.log
 maps/
-.DS_Store
-_ref_gazebo_moveit2/
-_ref_nav2/
-_ref_nav2b/
-_ref_m_explore/
+.vscode/

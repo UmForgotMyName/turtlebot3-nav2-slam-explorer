@@ -1,17 +1,23 @@
-import os
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression, TextSubstitution
+from launch.substitutions import (
+    Command,
+    EnvironmentVariable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+    PythonExpression,
+    TextSubstitution,
+)
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import FindExecutable
 
 
 def generate_launch_description() -> LaunchDescription:
-    project_root = os.environ.get("PROJECT_ROOT", "/root/project")
-    default_world = os.path.join(project_root, "assets", "worlds", "tb3_world.sdf")
+    default_world = PathJoinSubstitution(
+        [FindPackageShare("tb3_nav2_slam_bringup"), "assets", "worlds", "tb3_world.sdf"]
+    )
 
     world = LaunchConfiguration("world")
     model = LaunchConfiguration("model")
@@ -36,21 +42,11 @@ def generate_launch_description() -> LaunchDescription:
     )
     robot_description = Command([FindExecutable(name="xacro"), " ", urdf_path])
 
-    model_dir = PythonExpression(["'turtlebot3_' + '", model, "'"])
-    model_path = PathJoinSubstitution(
-        [FindPackageShare("turtlebot3_gazebo"), "models", model_dir, "model.sdf"]
+    assets_models = PathJoinSubstitution(
+        [FindPackageShare("tb3_nav2_slam_bringup"), "assets", "models"]
     )
-
-    tb3_models = PathJoinSubstitution([FindPackageShare("turtlebot3_gazebo"), "models"])
-    assets_models = os.path.join(project_root, "assets", "models")
-    existing_resources = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
-    if existing_resources:
-        resource_path = [
-            TextSubstitution(text=f"{assets_models}:{existing_resources}:"),
-            tb3_models,
-        ]
-    else:
-        resource_path = [TextSubstitution(text=f"{assets_models}:"), tb3_models]
+    existing_resources = EnvironmentVariable("GZ_SIM_RESOURCE_PATH", default_value="")
+    resource_path = [assets_models, TextSubstitution(text=":"), existing_resources]
 
     return LaunchDescription(
         [
@@ -77,7 +73,8 @@ def generate_launch_description() -> LaunchDescription:
             Node(
                 package="ros_gz_sim",
                 executable="create",
-                arguments=["-name", robot_name, "-file", model_path, "-z", "0.01"],
+                arguments=["-name", robot_name, "-param", "robot_description", "-z", "0.01"],
+                parameters=[{"robot_description": robot_description}],
                 output="screen",
             ),
             Node(
