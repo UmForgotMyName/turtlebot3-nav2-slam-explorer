@@ -19,6 +19,7 @@ Native Ubuntu:
 1) Build the image:
 ```
 chmod +x scripts/*.sh
+git submodule update --init --recursive
 ./scripts/build.sh
 ```
 

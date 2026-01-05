@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-teleop-twist-keyboard \
     ros-${ROS_DISTRO}-twist-mux \
     ros-${ROS_DISTRO}-rviz2 \
+    ros-${ROS_DISTRO}-turtlebot3-msgs \
     ros-${ROS_DISTRO}-turtlebot3-description \
   && rm -rf /var/lib/apt/lists/*
 
@@ -56,17 +57,17 @@ RUN mkdir -p ${TB3_WS}/src
 WORKDIR ${TB3_WS}/src
 
 # Upstream sources (cloned into the image)
-RUN git clone --branch new_gazebo https://github.com/azeey/turtlebot3_simulations.git \
- && git clone https://github.com/MaxStrange/m-explore-ros2.git \
- && cd m-explore-ros2 \
- && git checkout 9f0cd5dcb785b9fdd25c9fcf6d5b7a2a03773a3c
+RUN git clone --branch new_gazebo https://github.com/azeey/turtlebot3_simulations.git
+
+# m_explore_ros2 from submodule
+COPY ws/src/m_explore_ros2 ${TB3_WS}/src/m_explore_ros2
 
 # Bringup package from this repo
 COPY ws/src/tb3_nav2_slam_bringup ${TB3_WS}/src/tb3_nav2_slam_bringup
 
 WORKDIR ${TB3_WS}
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
- && rosdep install --from-paths src --ignore-src -r -y --rosdistro ${ROS_DISTRO} \
+ && rosdep install --from-paths src --ignore-src -r -y --rosdistro ${ROS_DISTRO} --skip-keys=ament_python \
  && colcon build --symlink-install"
 
 # Non-root dev user
