@@ -15,14 +15,41 @@ services:
 
       # WSLg GUI
       - DISPLAY=${DISPLAY:-:0}
-      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
-      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+      - WAYLAND_DISPLAY=wayland-0
+      - XDG_RUNTIME_DIR=/run/user/0
       - PULSE_SERVER=/mnt/wslg/PulseServer
       - QT_QPA_PLATFORM=wayland
       - QT_X11_NO_MITSHM=1
 
+      # Gazebo Harmonic + WSL2 GPU (aligned with gazebo-moveit2-motion-planner)
+      - GZ_VERSION=harmonic
+      - GALLIUM_DRIVER=d3d12
+      - MESA_LOADER_DRIVER_OVERRIDE=d3d12
+      - MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
+      - LIBGL_ALWAYS_SOFTWARE=0
+      - LIBGL_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri:/usr/lib/wsl/lib
+      - LD_LIBRARY_PATH=/usr/lib/wsl/lib
+      - mesa_glthread=false
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+
     volumes:
       - .:/home/ros/project:rw
-      - /mnt/wslg:/mnt/wslg
+      - /mnt/wslg:/mnt/wslg:rw
+      - /mnt/wslg/.X11-unix:/tmp/.X11-unix:rw
       - /usr/lib/wsl:/usr/lib/wsl:ro
-      - /tmp/.X11-unix:/tmp/.X11-unix
+
+    devices:
+      - /dev/dxg:/dev/dxg
+      - /dev/dri:/dev/dri
+
+    privileged: true
+    user: "0:0"
+    entrypoint:
+      [
+        "/bin/bash",
+        "-c",
+        "install -d -m700 /run/user/0 && ln -sf /mnt/wslg/runtime-dir/wayland-0 /run/user/0/wayland-0 && exec \"$@\"",
+        "--",
+      ]
+    command: sleep infinity

@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     lsb-release \
     locales \
+    software-properties-common \
+    wget \
     python3-pip \
     python3-rosdep \
     python3-colcon-common-extensions \
@@ -30,6 +32,16 @@ RUN mkdir -p /etc/apt/keyrings \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/gazebo.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" \
     > /etc/apt/sources.list.d/gazebo-stable.list
 
+# Mesa / graphics stack for WSLg (aligned with gazebo-moveit2-motion-planner)
+RUN add-apt-repository -y ppa:kisak/turtle \
+ && apt-get update && apt-get install -y --no-install-recommends \
+    libglvnd0 libgl1 libglx0 libxext6 libx11-6 libxkbcommon-x11-0 \
+    libegl1 libglu1-mesa mesa-utils mesa-utils-extra \
+    libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6 \
+    x11-apps x11-utils x11-xserver-utils xauth \
+    libgl1-mesa-dri libegl-mesa0 libgbm1 libglx-mesa0 \
+  && rm -rf /var/lib/apt/lists/*
+
 # Gazebo Harmonic + ROS gz harmonic + Nav2 + SLAM toolbox
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gz-harmonic \
@@ -40,11 +52,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-robot-state-publisher \
     ros-${ROS_DISTRO}-xacro \
     ros-${ROS_DISTRO}-joint-state-publisher \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
     ros-${ROS_DISTRO}-teleop-twist-keyboard \
     ros-${ROS_DISTRO}-twist-mux \
     ros-${ROS_DISTRO}-rviz2 \
     ros-${ROS_DISTRO}-turtlebot3-msgs \
     ros-${ROS_DISTRO}-turtlebot3-description \
+    qtwayland5 \
   && rm -rf /var/lib/apt/lists/*
 
 # rosdep init/update (must be root)
@@ -53,6 +67,7 @@ RUN rosdep update --rosdistro=${ROS_DISTRO}
 
 # Workspace
 ENV TB3_WS=/opt/tb3_ws
+ENV TB3_SIM_MODELS=/opt/tb3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models
 RUN mkdir -p ${TB3_WS}/src
 WORKDIR ${TB3_WS}/src
 
@@ -70,18 +85,10 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash \
  && rosdep install --from-paths src --ignore-src -r -y --rosdistro ${ROS_DISTRO} --skip-keys=ament_python \
  && colcon build --symlink-install"
 
-# Non-root dev user
-ARG USERNAME=ros
-ARG USER_UID=1000
-ARG USER_GID=1000
-RUN groupadd --gid ${USER_GID} ${USERNAME} \
- && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME}
-
 # Source ROS + workspace in interactive shells
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc \
  && echo "source ${TB3_WS}/install/setup.bash" >> /etc/bash.bashrc
 
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
+WORKDIR /root
 
 CMD ["bash"]

@@ -36,7 +36,7 @@ def generate_launch_description() -> LaunchDescription:
         ["'", headless, "' == 'True' or '", gui, "' == 'False'"]
     )
 
-    urdf_file = PythonExpression(["'turtlebot3_' + '", model, "' + '.urdf.xacro'"])
+    urdf_file = PythonExpression(["'turtlebot3_' + '", model, "' + '.urdf'"])
     urdf_path = PathJoinSubstitution(
         [FindPackageShare("turtlebot3_description"), "urdf", urdf_file]
     )
@@ -45,8 +45,20 @@ def generate_launch_description() -> LaunchDescription:
     assets_models = PathJoinSubstitution(
         [FindPackageShare("tb3_nav2_slam_bringup"), "assets", "models"]
     )
+    tb3_models = EnvironmentVariable(
+        "TB3_SIM_MODELS",
+        default_value="/opt/tb3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models",
+    )
+    model_dir = PythonExpression(["'turtlebot3_' + '", model, "'"])
+    model_path = PathJoinSubstitution([tb3_models, model_dir, "model.sdf"])
     existing_resources = EnvironmentVariable("GZ_SIM_RESOURCE_PATH", default_value="")
-    resource_path = [assets_models, TextSubstitution(text=":"), existing_resources]
+    resource_path = [
+        assets_models,
+        TextSubstitution(text=":"),
+        tb3_models,
+        TextSubstitution(text=":"),
+        existing_resources,
+    ]
 
     return LaunchDescription(
         [
@@ -73,8 +85,7 @@ def generate_launch_description() -> LaunchDescription:
             Node(
                 package="ros_gz_sim",
                 executable="create",
-                arguments=["-name", robot_name, "-param", "robot_description", "-z", "0.01"],
-                parameters=[{"robot_description": robot_description}],
+                arguments=["-name", robot_name, "-file", model_path, "-z", "0.01"],
                 output="screen",
             ),
             Node(
